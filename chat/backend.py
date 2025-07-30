@@ -1,66 +1,9 @@
-import os
-import inspect
-from typing import List
 from __future__ import annotations ## reflective typehints
+import os
+from typing import List
 
-
-class Message:
-    class Serializer:
-        @staticmethod
-        def __call__(message:Message):
-            return {"content":message.content, "role":message.role} | message.kwargs
-
-    def __init__(self, content, role="user", **kwargs):
-        self.content = content
-        self.role = role
-        self.kwargs = kwargs
-
-    def serialize(self, serializer:Serializer=Serializer()):
-        return serializer(self)
-    
-    def __repr__(self):
-        return f"({self.role}) {self.content}"
-    
-class Tool:
-    class Serializer:
-        @staticmethod
-        def __call__(tool:Tool):
-            return [{
-                "type": "function",
-                "name": tool.name,
-                "description": tool.description,
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        k: {"type":v} for k,v in tool.parameters.values()
-                    },
-                    "required": tool.required,
-                    "additionalProperties": False
-                },
-                "strict": True
-            }]
-
-    def __init__(self, tool:callable):
-        lut = {
-            "int": "integer",
-            "float": "number",
-            "str": "string",
-            "bool": "bool",
-        }
-        translate = lambda x: lut[x] if x in lut else x
-
-        self.name = tool.__name__
-        self.description = tool.__doc__
-        spec = inspect.signature(tool).parameters.values()
-        self.parameters = {
-            param.name: translate(param.annotation.__class__) for param in spec
-        }
-        self.required = [
-            param.name for param in spec if isinstance(param.default, inspect._empty)
-        ]
-
-    def serialize(self, serializer:Serializer=Serializer()):
-        return serializer(self)
+from .message import Message
+from .tool import Tool
 
 class Backend:
     def create(self, context:List[Message], tools:List[Tool]=[]) -> Message:
@@ -96,55 +39,29 @@ class BackendOllama(Backend):
 
     def create(self, context:List[Message], tools:List[Tool]=[]) -> Message:
         from ollama import chat, ChatResponse
-        tools = [t.serialize() for t in tools] if tools else None
-        result:ChatResponse = chat(
-            model=self.model,
-            tools=tools,
-            think=self.think,
-            messages=[
-                m.serializeOllama() for m in context
-            ]
-            )
+        toolsSerialized = [t.serialize() for t in tools] if tools else None
+        toolLUT = {t.name: t.cb for t in tools} if tools else {}
+        messages = [m.serialize() for m in context]
+        result = None
         lastHash = None
-        while result.message.tool_calls:
-            results = []
+
+        while not result or result.message.tool_calls:
+            result:ChatResponse = chat(
+                model=self.model,
+                think=self.think,
+                messages=messages,
+                tools=toolsSerialized,
+                )
+            if not result.message.tool_calls:
+                break
             for tool in result.message.tool_calls:
                 newHash = hash(tool.function.name + str(tool.function.arguments))
                 if newHash == lastHash:
                     content = "error: multiple sequential identical calls detected!"
+                elif tool.function.name not in toolLUT:
+                    content = "error: invalid tool name (UNKNOWN)"
                 else:
-                    content = 
-                results.append({"role":"tool", "content":content, "tool_name":tool.function.name})
-
-
+                    content = toolLUT[tool.function.name](**tool.function.arguments)
+                messages.append({"role":"tool", "content":content, "tool_name":tool.function.name})
         return Message(result.message.content, result.message.role)
     
-class Session:
-    def __init__(self, backend):
-        self.backend:Backend = backend
-        self.system = None
-        self.history = []
-        self.tools = {}
-
-    def setSystem(self, prompt:str):
-        self.system = Message(prompt, "system")
-        self.history.append(self.system)
-
-    def clear(self):
-        self.history.clear()
-
-    def query(self, prompt:str) -> str:
-        self.history.append(Message(prompt, "user"))
-        result = self.backend.create(self.history, self.tools)
-        self.history.append(result)
-        return result.content
-
-
-if __name__ == "__main__":
-    backend = BackendOllama("qwen3:8b", think=False)
-    session = Session(backend)
-    session.setSystem("you are a helpful assistant and add a hashtag to the start of each line of your answer.")
-    print(session.query("hello"))
-    print(session.history)
-    print(session.query("what is the current time?"))
-    print(session.history)
