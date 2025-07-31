@@ -1,0 +1,4 @@
+- log all messages and make sessions restorable
+- store all messages into local rag like system for context enrichment
+- make mcp tools switchable
+- allow for threads in discussions (with thread local history, and rag additions)

@@ -1,0 +1,22 @@
+{
+    "backend":"ollama",
+    "model":"qwen3:8b",
+    "thinking":true,
+    "system": "you are a helpful assistant.",
+    "style": {
+        "logo":"header.png",
+        "user":"#aaeeaa",
+        "agent":"#cccccc",
+        "title":"chat agent",
+        "style":"yeti",
+        "css":"#input-container {background-color:#e9eae3;}  body {background-color:#e9eae3;} .card {background-color:#e9eae3;}"
+    },
+    "mcpServers" : {
+        "TimeServer": {
+            "workdir": ".",
+            "command": "python3",
+            "env": {"VIRTUAL_ENV":"."},
+            "arguments":["mcp/mcpTimeServer.py"]
+        }
+    }
+}

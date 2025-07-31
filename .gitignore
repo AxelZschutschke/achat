@@ -3,3 +3,6 @@ bin
 include
 lib
 pyvenv.cfg
+tmp
+__pycache__
+chat/__pycache__

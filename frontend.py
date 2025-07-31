@@ -1,26 +1,36 @@
-from chat.bubble import Bubble
-from chat.backend import BackendOllama
+from chat.viewport import Viewport
+from chat.backendOllama import BackendOllama
+from chat.backendOpenAI import BackendOpenAI
 from chat.mcpClientStdio import MCPClient
 from chat.session import Session
 
-import asyncio
+import json
 
-user = Bubble(color="#aaeeaa",position="left")
-agent = Bubble(color="#bbbbbb",position="right")
+with open("frontend.json", "r") as f:
+    config = json.load(f)
 
-backend = BackendOllama("qwen3:8b", think=False)
 
-mcpClient1 = MCPClient()
-asyncio.run(mcpClient1.connectToServer("./mcpTimeServer.sh"))
+viewport = Viewport(config)
+
+if not "backend" in config or config["backend"] == "ollama":
+    backend = BackendOllama(config.get("model","quen3:8b"), think=config.get("thinking",False))
+elif config["backend"] == "openai":
+    backend = BackendOpenAI(config.get("model","quen3:8b"))
 
 session = Session(backend)
-session.setSystem("you are a helpful assistant.")
-for t in mcpClient1.tools:
-    session.addTool(t)
+if "system" in config:
+    session.setSystem(config["system"])
 
-agent.output("Hello, I'm ready!")
+mcps = {}
+for mcp, mcpConfig in config.get("mcpServers",{}).items():
+    mcps[mcp] = MCPClient(mcpConfig)
+    for t in mcps[mcp].tools:
+        session.addTool(t)
+
+
+viewport.agent.output("Hello, I'm ready!")
 while True:
-    query = user.input()
-    with agent.loading():
+    query = viewport.user.input()
+    with viewport.agent.loading():
         result = session.query(query)
-    agent.output(result)
+    viewport.agent.output(result)
