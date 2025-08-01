@@ -1,6 +1,7 @@
 from __future__ import annotations ## reflective typehints
 import os
 from typing import List, Tuple
+import json
 
 from .message import Message
 from .tool import Tool
@@ -15,15 +16,34 @@ class BackendOpenAI(Backend):
         self.model = model
 
     def create(self, context:List[Tuple[int,Message]], tools:List[Tool]=[]) -> Message:
-        # loop until end of tools
-        tools = [t.serialize() for t in tools] if tools else None
+        toolsSerialized = [t.serialize() for t in tools] if tools else None
+        toolLUT = {t.name: t.cb for t in tools} if tools else {}
         tool_choice = "auto" if tools else None
-        result = self.session.responses.create(
-            model=self.model,
-            tools=tools,
-            tool_choice=tool_choice,
-            input=[
-                m.serialize() for m in context
-            ]
-            )
-        return Message(result.content, "assistant")
+        messages = [m.serialize() for _,m in context]
+        lastHash = None
+
+        while True:
+            result = self.session.completions.create(
+                model=self.model,
+                tools=toolsSerialized,
+                tool_choice=tool_choice,
+                input=messages
+                )
+
+            if not result.choices:
+                return None
+
+            for part in result.choices:
+                partt = part.type
+                if partt == "tool_call":
+                    newHash = hash(part.name + part.arguments)
+                    if newHash == lastHash:
+                        content = "error: multiple sequential identical calls detected!"
+                    elif part.name not in toolLUT:
+                        content = "error: invalid tool name (UNKNOWN)"
+                    else:
+                        args = json.loads(part.arguments)
+                        content = toolLUT[part.name](**args)
+                    messages.append({"role":"tool_response", "content":content, "name":part.name})
+                else:
+                    return Message(part.content, "assistant")

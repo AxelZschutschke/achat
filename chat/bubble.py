@@ -5,7 +5,7 @@ class Bubble:
         self.color = color
         self.textSize = textSize
         self.margin = "left" if position == "right" else "right" ## invert position to margin
-        self.css = f"background-color:{self.color}; border-radius:2em 2em; padding:1em; font-size:{self.textSize}; margin-{self.margin}:2em;"
+        self.css = f"background-color:{self.color}; border-radius:2em 2em; padding:2em; font-size:{self.textSize}; margin-{self.margin}:2em;"
 
     def output(self, markdown:str) -> None:
         """render a string into a text-bubble

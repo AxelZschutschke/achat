@@ -29,8 +29,13 @@ for mcp, mcpConfig in config.get("mcpServers",{}).items():
 
 
 viewport.agent.output("Hello, I'm ready!")
-while True:
-    query = viewport.user.input()
-    with viewport.agent.loading():
-        result = session.query(query)
-    viewport.agent.output(result)
+try:
+    while True:
+        query = viewport.user.input()
+        with viewport.agent.loading():
+            result = session.query(query)
+        viewport.agent.output(result)
+except Exception as e:
+    print(f"exception occoured: {e}")
+    with open("tmp/last.json", "w") as f:
+        json.dump(session.dumpj(), f, indent=3)

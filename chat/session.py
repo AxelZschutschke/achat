@@ -1,7 +1,7 @@
 from .message import Message
 from .tool import Tool
 
-from typing import List
+from typing import List, Tuple, Dict
 
 class Backend:
     def create(self, context:List[Message], tools:List[Tool]=[]) -> Message:
@@ -11,7 +11,7 @@ class Backend:
 class Session:
     def __init__(self, backend):
         self.backend:Backend = backend
-        self.history = []
+        self.history:List[Tuple[int,Message]] = []
         self.tools = []
         self.id = 0
 
@@ -23,8 +23,14 @@ class Session:
         self.history.clear()
         self.id = 0
 
+    def dumpj(self):
+        return {i: m.serialize() for i,m in self.history}
+    
+    def loadj(self, restore:Dict):
+        pass
+
     def removeMessageFromHistory(self, id):
-        self.history = [m for m in self.history if not m[0] == id]
+        self.history = [(i,m) for i,m in self.history if not i == id]
 
     def addTool(self, tool:Tool):
         self.tools.append(tool)

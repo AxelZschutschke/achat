@@ -1,20 +1,21 @@
 from __future__ import annotations ## reflective typehints
-from typing import List
 
 from .message import Message
 from .tool import Tool
 from .session import Backend
+
+from ollama import chat, ChatResponse, embed
+from typing import List, Tuple
 
 class BackendOllama(Backend):
     def __init__(self, model, think=None):
         self.model = model
         self.think = think
 
-    def create(self, context:List[Message], tools:List[Tool]=[]) -> Message:
-        from ollama import chat, ChatResponse
+    def create(self, context:List[Tuple[int,Message]], tools:List[Tool]=[]) -> Message:
         toolsSerialized = [t.serialize() for t in tools] if tools else None
         toolLUT = {t.name: t.cb for t in tools} if tools else {}
-        messages = [m[1].serialize() for m in context]
+        messages = [m.serialize() for _,m in context]
         result = None
         lastHash = None
 
