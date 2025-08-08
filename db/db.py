@@ -1,22 +1,19 @@
 #import faiss
 import numpy as np
-import pickle
+import json
 from typing import List, Dict
-from ..chat.session import Backend
+from chat.session import Backend
 
 class DB:
     def __init__(self,path:str,backend:Backend):
         self.path = path
-        self.db = {}
-        self.indices = []
-        self.keywords = {}
-        self.index = None
+        self.db = {"documents":{},"embeddings":{},"keywords":{}}
         self.chunkSize = 1000
         self.chunkOverlap = 100
         self.backend = backend
 
     @staticmethod
-    def cosine_similarity(a, b):
+    def cosineSimilarity(a, b):
         """
         Compute the cosine similarity between two vectors.
         
@@ -45,6 +42,10 @@ class DB:
         # Compute cosine similarity
         return dot_product / (norm_a * norm_b)
 
+    def findKNN(self, query, k=5):
+        dist = [(v[1:],DB.cosineSimilarity(query, v[0])) for v in self.db["embeddings"].values()]
+        dist.sort(key=lambda x: x[1],reverse=True)
+        return dist[:k]
 
     def createChunks(self, text:str):
         assert self.chunkSize > self.chunkOverlap
@@ -72,12 +73,6 @@ class DB:
         seek.append((start, stop - start))
         return seek, chunks
 
-    @staticmethod
-    def createIndex(embeddings:List):
-        index = faiss.IndexFlatL2(len(embeddings[0]))
-        index.add(np.array(embeddings,dtype=np.float32))
-        return index
-
     def checkInFile(self, path:str):
         with open(path, "r") as f:
             self.checkIn(path, f.read())
@@ -85,26 +80,22 @@ class DB:
     def checkIn(self, document:str, text:str, keywords:List=[]):
         seek, chunks = self.createChunks(text)
         embeddings = self.backend.createEmbeddings(chunks)
-        index = DB.createIndex(embeddings)
-        pickled = pickle.dumps(index)
-        if self.index:
-            self.index.merge_from(index)
-        else:
-            self.index = index
-        for s in seek:
-            self.indices.append((document, s[0], s[1]))
-        self.db[document] = (seek, pickled, text)
+        for i,c,e in zip(seek, chunks, embeddings):
+            id = hash(c)
+            self.db["embeddings"][id] = (e, i[0], i[1], document)
+        self.db["documents"][document] = text
         for k in keywords:
-            self.keywords.setdefault(k,[])
-            self.keywords[k].append(document)
+            self.db["keywords"].setdefault(k,[])
+            self.db["keywords"][k].append(document)
     
     def search(self, query:str, num:int=3, padding:int=500, keywords:List=[]):
-        query = self.backend.createEmbeddings([query])
-        distances, indices = self.index.search(np.array(query,dtype=np.float32), num)
+        qEmbedding = self.backend.createEmbeddings([query])[0]
+        knn = self.findKNN(qEmbedding, num)
+        print(knn)
         result = []
-        for i in indices[0]:
-            doc, seek, length = self.indices[i]
-            text = self.db[doc][2]
+        for info, dist in knn:
+            seek, length, doc = info
+            text = self.db["documents"][doc]
             start = max(0, seek - padding)
             stop = min(start + length + 2*padding, len(text))
 
@@ -112,39 +103,25 @@ class DB:
         return result
 
     def save(self):
-        with open(self.path, "wb") as f:
-            pickle.dump((self.db, self.keywords), f)
+        with open(self.path, "w") as f:
+            json.dump(self.db, f, indent=3)
 
     def load(self):
         with open(self.path, "rb") as f:
-            loaded = pickle.load(f)
-            self.db, self.keywords = loaded
+            self.db = json.load(f)
 
-        for k in self.db:
-            seek, pickled, text = self.db[k]
-            index = pickle.loads(pickled)
-            if self.index:
-                self.index.merge_from(index)
-            else:
-                self.index = index
-            for s in seek:
-                self.indices.append((k, s[0], s[1]))
-        print(self.db.keys())
-
-def createDB(dbName:str, paths:List):
-    db = DB(dbName)
+def createDB(dbName:str, paths:List, backend:Backend):
+    db = DB(dbName,backend=backend)
     for p in paths:
         db.checkInFile(p)
     db.save()
     return db
 
-def loadDB(dbName:str):
-    db = DB(dbName)
+def loadDB(dbName:str, backend:Backend):
+    db = DB(dbName, backend=backend)
     db.load()
     return db
 
-db = createDB("../tmp/database.db",["../tmp/arrah.md","../tmp/balloon.md"])
-print(db.search("cannons shoot balls",1))
 
 ### reference
 #   @staticmethod
