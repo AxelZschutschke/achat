@@ -8,9 +8,10 @@ from ollama import chat, ChatResponse, embed
 from typing import List, Tuple
 
 class BackendOllama(Backend):
-    def __init__(self, model, think=None):
+    def __init__(self, model:str = "qwen3:14b", think:bool=None, embeddings:str = "all-minilm"):
         self.model = model
         self.think = think
+        self.embeddings = embeddings
 
     def create(self, context:List[Tuple[int,Message]], tools:List[Tool]=[]) -> Message:
         toolsSerialized = [t.serialize() for t in tools] if tools else None
@@ -39,3 +40,5 @@ class BackendOllama(Backend):
                 messages.append({"role":"tool", "content":content, "tool_name":tool.function.name})
         return Message(result.message.content, result.message.role)
     
+    def createEmbeddings(self, chunks:List[str]):
+        return embed(self.embeddings,chunks).embeddings

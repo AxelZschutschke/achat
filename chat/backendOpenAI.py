@@ -47,3 +47,6 @@ class BackendOpenAI(Backend):
                     messages.append({"role":"tool_response", "content":content, "name":part.name})
                 else:
                     return Message(part.content, "assistant")
+    
+    def createEmbeddings(self, chunks):
+        return super().createEmbeddings(chunks)

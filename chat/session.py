@@ -8,6 +8,9 @@ class Backend:
         del context
         del tools
 
+    def createEmbeddings(self, chunks:List[str]):
+        del chunks
+
 class Session:
     def __init__(self, backend):
         self.backend:Backend = backend

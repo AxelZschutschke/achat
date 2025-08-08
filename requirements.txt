@@ -2,3 +2,5 @@ openai
 mcp
 pywebio
 ollama
+faiss-cpu
+sqlmodel
