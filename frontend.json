@@ -2,7 +2,7 @@
     "backend":"ollama",
     "model":"qwen3:8b",
     "thinking":true,
-    "system": "you are a helpful assistant.",
+    "system": "you are a helpful assistant. use the given tools. multiple calls for gathering additional info may be beneficial.",
     "style": {
         "logo":"header.png",
         "user":"#aaeeaa",
@@ -12,6 +12,18 @@
         "css":"#input-container {background-color:#e9eae3;}  body {background-color:#e9eae3;} .card {background-color:#e9eae3;}"
     },
     "mcpServers" : {
+        "FileServer": {
+            "workdir": ".",
+            "command": "python3",
+            "env": {"PYTHONPATH":""},
+            "arguments":["mcp/mcpFileServer.py"]
+        },
+        "RAGServer": {
+            "workdir": ".",
+            "command": "python3",
+            "env": {"PYTHONPATH":""},
+            "arguments":["mcp/mcpRAGServer.py"]
+        },
         "TimeServer": {
             "workdir": ".",
             "command": "python3",

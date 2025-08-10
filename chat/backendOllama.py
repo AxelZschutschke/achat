@@ -37,8 +37,15 @@ class BackendOllama(Backend):
                     content = "error: invalid tool name (UNKNOWN)"
                 else:
                     content = toolLUT[tool.function.name](**tool.function.arguments)
+
+                print()
+                print(tool.function.name)
+                print(tool.function.arguments)
+                print(content)
+
                 messages.append({"role":"tool", "content":content, "tool_name":tool.function.name})
         return Message(result.message.content, result.message.role)
     
-    def createEmbeddings(self, chunks:List[str]):
-        return embed(self.embeddings,chunks).embeddings
+    def createEmbeddings(self, chunks:List[str], model:str=None):
+        model = model if model else self.embeddings
+        return embed(model,chunks).embeddings

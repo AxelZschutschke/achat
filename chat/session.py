@@ -4,12 +4,16 @@ from .tool import Tool
 from typing import List, Tuple, Dict
 
 class Backend:
+    model = "dummy-net"
+    embeddings = "dummy-net"
+
     def create(self, context:List[Message], tools:List[Tool]=[]) -> Message:
         del context
         del tools
 
-    def createEmbeddings(self, chunks:List[str]):
+    def createEmbeddings(self, chunks:List[str], model:str=None):
         del chunks
+        del model
 
 class Session:
     def __init__(self, backend):
@@ -48,3 +52,9 @@ class Session:
         self.id += 1
 
         return result.content
+    
+    def __str__(self):
+        result = ""
+        for i,m in self.history:
+            result += f"{m}\n\n"
+        return result
