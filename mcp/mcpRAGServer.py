@@ -1,9 +1,11 @@
 from mcp.server.fastmcp import FastMCP
-from db.tools import loadDB
+from chat.db import DB
+from db.embedding import float32
 from chat.backendOllama import BackendOllama
 
 server = FastMCP("RAGServer")
-db = loadDB("tmp/rag.db", BackendOllama())
+db = DB(BackendOllama(),float32)
+db.open("tmp/db")
 
 @server.tool()
 def search(query:str) -> str:
@@ -15,9 +17,10 @@ def search(query:str) -> str:
     Returns:
         the best-matching result given as [DOCUMENT : OFFSET] TEXT
     """
-    result = db.search(query, num=1, padding=500)[0]
 
-    return f"[{result.document}:{result.start}] {result.text}"
+    result = db.search(query, num=1, length=2048)
+
+    return result[0][0]
 
 if __name__ == "__main__":
     server.run(transport="stdio")

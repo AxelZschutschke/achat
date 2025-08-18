@@ -6,7 +6,8 @@ from typing import List, Tuple, Dict
 class Backend:
     model = "dummy-net"
     embeddings = "dummy-net"
-
+    backend = "dummy"
+    
     def create(self, context:List[Message], tools:List[Tool]=[]) -> Message:
         del context
         del tools

@@ -1,23 +1,16 @@
 from chat.viewport import Viewport
-from chat.backendOllama import BackendOllama
-from chat.backendOpenAI import BackendOpenAI
-from chat.mcpClientStdio import MCPClient
 from chat.session import Session
-
+from chat.mcpClientStdio import MCPClient
+from chat.backendFactory import createBackend
 import json
 
 with open("frontend.json", "r") as f:
     config = json.load(f)
 
-
 viewport = Viewport(config)
-
-if not "backend" in config or config["backend"] == "ollama":
-    backend = BackendOllama(config.get("model","quen3:8b"), think=config.get("thinking",False))
-elif config["backend"] == "openai":
-    backend = BackendOpenAI(config.get("model","quen3:8b"))
-
+backend = createBackend(**config)
 session = Session(backend)
+
 if "system" in config:
     session.setSystem(config["system"])
 
@@ -37,5 +30,6 @@ try:
         viewport.agent.output(result)
 except Exception as e:
     print(f"exception occoured: {e}")
+finally:
     with open("tmp/last.json", "w") as f:
         json.dump(session.dumpj(), f, indent=3)

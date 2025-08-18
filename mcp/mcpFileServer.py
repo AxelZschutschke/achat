@@ -26,14 +26,15 @@ def write(path:str, content:str) -> str:
         path - name of the file to be written
         content - the raw content of the new file
     Returns:
-        nothing or error message
+        "ok" or error message
     """
     relpath = os.path.join(".", path)
     if os.path.isfile(relpath):
         return "Error: file existing"
     with open(relpath, "w") as f:
         f.write(content)
-        
+    return "ok"
+
 @server.tool()
 def ls(path:str) -> str:
     """list the directory contents of path

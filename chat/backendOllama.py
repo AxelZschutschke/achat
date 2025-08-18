@@ -12,6 +12,7 @@ class BackendOllama(Backend):
         self.model = model
         self.think = think
         self.embeddings = embeddings
+        self.backend = "ollama"
 
     def create(self, context:List[Tuple[int,Message]], tools:List[Tool]=[]) -> Message:
         toolsSerialized = [t.serialize() for t in tools] if tools else None

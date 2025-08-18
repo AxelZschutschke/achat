@@ -6,3 +6,4 @@ pyvenv.cfg
 tmp
 __pycache__
 chat/__pycache__
+debug.json
