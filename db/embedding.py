@@ -27,15 +27,23 @@ EmbeddingTypes = [
 
 class Embedding:
     def __init__(self):
-        self.type = None
-        self.data = None
-        self.norm = None
+        self.type:EmbeddingT = None
+        self.data:np.array = None
+        self.norm:float = None
 
     @staticmethod
     def create(data:list, type:EmbeddingT) -> Embedding:
         res = Embedding()
         res.type = type
         res.data = np.array([x * type.factor for x in data], type.numpyT)
+        res.norm = np.linalg.norm(res.data)
+        return res
+    
+    @staticmethod
+    def fromArray(data:np.array, type:EmbeddingT) -> Embedding:
+        res = Embedding()
+        res.type = type
+        res.data = data
         res.norm = np.linalg.norm(res.data)
         return res
 

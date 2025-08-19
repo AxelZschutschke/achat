@@ -8,13 +8,15 @@ from .hash import md5file
 from .utils import createChunks, getChunk, calcSimilarities
 
 class IndexFileConf:
-    def __init__(self, chunkstride:int = 512, chunklength:int = 1024, md5:str="", keywords:List[str]=[], backend:str="", model:str="", **kwargs):
+    def __init__(self, chunkstride:int = 512, chunklength:int = 1024, md5:str="", embedding:str="", length:int=0, keywords:List[str]=[], backend:str="", model:str="", **kwargs):
         self.chunkstride = chunkstride
         self.chunklength = chunklength
         self.backend = backend
         self.model = model
         self.keywords = keywords
         self.md5 = md5
+        self.embedding = embedding
+        self.length = length
 
 class IndexFile:
     def __init__(self, ref:pathlib.Path):
@@ -24,11 +26,21 @@ class IndexFile:
         self.path = ref.with_name(ref.name + ".idx")
         self.conf = IndexFileConf()
         self.embeddings = []
+        self.embedding = None
 
     def updateMD5(self):
         if not self.orig.is_file():
             return False
         self.conf.md5 = md5file(self.orig)
+
+    def updateEmbedding(self):
+        if self.embeddings and not self.embedding:
+            embedding = self.embeddings[0].data
+            for i in range(1,len(self.embeddings)):
+                embedding = (embedding*i + self.embeddings[i].data) / (i+1)
+            self.embedding = Embedding.fromArray(embedding,self.embeddings[0].type)
+            self.conf.embedding = self.embedding.serialize().decode("utf8")
+            self.conf.length = len(self.embeddings)
 
     def check(self):
         if not self.path.is_file():
@@ -69,6 +81,7 @@ class IndexFile:
                 confraw.append(line)
             confj = json.loads("\n".join(confraw))
             self.conf = IndexFileConf(**confj)
+            self.embedding = Embedding.deserialize(self.conf.embedding.encode("utf8"))
 
     def readEmbeddings(self) -> List[Embedding]:
         if self.embeddings:
@@ -80,6 +93,7 @@ class IndexFile:
                     self.embeddings.append(Embedding.deserialize(line))
                 except:
                     pass
+        self.updateEmbedding()
         return self.embeddings
 
     def save(self):

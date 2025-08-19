@@ -41,6 +41,7 @@ class DB(VectorDB):
                         raw = self.backend.createEmbeddings(chunks)
                         idx.embeddings = [Embedding.create(x, self.embeddingT) for x in raw]
                         idx.updateMD5()
+                        idx.updateEmbedding()
                         idx.setCompatible(self.backend.backend, self.backend.embeddings)
                         idx.save()
                         idx.unloadEmbeddings()
